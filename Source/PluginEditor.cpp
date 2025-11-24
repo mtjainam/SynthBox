@@ -2,7 +2,7 @@
 #include "PluginEditor.h"
 
 Distortion1AudioProcessorEditor::Distortion1AudioProcessorEditor (Distortion1AudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p), scope(p.latestSample),
+    : AudioProcessorEditor (&p), audioProcessor (p), scope(p.latestSample), levelMeter(p.latestSample),
       waveformPreviews{ WaveformPreviewComponent::SQUARE, WaveformPreviewComponent::SAW, 
                         WaveformPreviewComponent::TRIANGLE, WaveformPreviewComponent::SINE }
 {
@@ -10,6 +10,7 @@ Distortion1AudioProcessorEditor::Distortion1AudioProcessorEditor (Distortion1Aud
     setResizable(true, true);
     setResizeLimits(600, 400, 2000, 1200);
     addAndMakeVisible(scope);
+    addAndMakeVisible(levelMeter);
     
     for(int i=0; i<4; ++i)
         addAndMakeVisible(waveformPreviews[i]);
@@ -87,8 +88,11 @@ void Distortion1AudioProcessorEditor::resized()
     const int scopeX = (int)(10 * scale);
     const int scopeY = (int)(50 * scale);
     const int scopeHeight = currentHeight - (int)(60 * scale);
+    const int meterWidth = (int)(20 * scale);
+    const int meterX = scopeX + scopeWidth + (int)(5 * scale);
     
     scope.setBounds(scopeX, scopeY, scopeWidth, scopeHeight);
+    levelMeter.setBounds(meterX, scopeY, meterWidth, scopeHeight);
     
     const int xStart = (int)(230 * scale);
     const int yStart = (int)(60 * scale);

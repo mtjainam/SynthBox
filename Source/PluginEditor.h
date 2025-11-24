@@ -36,6 +36,62 @@ private:
 
 //==============================================================================
 
+class LevelMeterComponent : public juce::Component, private juce::Timer
+{
+public:
+    LevelMeterComponent(std::atomic<float>& src) : source(src) 
+    { 
+        startTimerHz(60);
+        level = 0.0f;
+    }
+
+    void paint(juce::Graphics& g) override
+    {
+        g.fillAll(juce::Colours::black);
+        
+        const float width = (float)getWidth();
+        const float height = (float)getHeight();
+        
+        // Draw level bar
+        const float levelHeight = height * level;
+        const float barY = height - levelHeight;
+        
+        // Color gradient: green -> yellow -> red
+        juce::Colour barColour;
+        if (level < 0.7f)
+            barColour = juce::Colours::green;
+        else if (level < 0.9f)
+            barColour = juce::Colours::yellow;
+        else
+            barColour = juce::Colours::red;
+        
+        g.setColour(barColour);
+        g.fillRect(0.0f, barY, width, levelHeight);
+        
+        // Draw outline
+        g.setColour(juce::Colours::white.withAlpha(0.3f));
+        g.drawRect(getLocalBounds().toFloat(), 1.0f);
+    }
+
+private:
+    void timerCallback() override
+    {
+        float s = std::abs(source.load());
+        // Smooth the level with a simple peak hold
+        if (s > level)
+            level = s;
+        else
+            level = level * 0.95f; // Decay
+        
+        repaint();
+    }
+
+    std::atomic<float>& source;
+    float level;
+};
+
+//==============================================================================
+
 class WaveformPreviewComponent : public juce::Component
 {
 public:
@@ -46,7 +102,8 @@ public:
     void paint(juce::Graphics& g) override
     {
         g.fillAll(juce::Colours::black);
-        g.setColour(juce::Colours::white);
+        juce::Colour blueColour = juce::Colour(0xff4a90e2); // Blue similar to JUCE knobs
+        g.setColour(blueColour);
         
         const float width = (float)getWidth();
         const float height = (float)getHeight();
@@ -119,6 +176,7 @@ private:
     WaveformPreviewComponent waveformPreviews[4];
 
     OscilloscopeComponent scope;
+    LevelMeterComponent levelMeter;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Distortion1AudioProcessorEditor)
 };

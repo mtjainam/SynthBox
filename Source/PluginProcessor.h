@@ -56,6 +56,8 @@ private:
     struct NoteData {
         float freq;
         double phase[4] {0.0};
+        float envelope = 1.0f;  // Envelope (1.0 = full volume, 0.0 = silent)
+        bool releasing = false; // Track if note is in release phase
     };
     std::map<int, NoteData> activeNotes;
 

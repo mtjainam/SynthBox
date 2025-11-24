@@ -56,11 +56,17 @@ void Distortion1AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
             NoteData note;
             note.freq = juce::MidiMessage::getMidiNoteInHertz(noteNumber);
             for(int i=0; i<4; ++i) note.phase[i] = 0.0;
+            note.envelope = 1.0f;
+            note.releasing = false;
             activeNotes[noteNumber] = note;
         }
         else if (msg.isNoteOff())
         {
-            activeNotes.erase(noteNumber);
+            auto it = activeNotes.find(noteNumber);
+            if (it != activeNotes.end())
+            {
+                it->second.releasing = true; // Start release instead of removing
+            }
         }
     }
 
@@ -83,8 +89,21 @@ void Distortion1AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
         float out=0.f;
         
         // Process each active note
-        for(auto& [noteNum, note] : activeNotes)
+        for(auto it = activeNotes.begin(); it != activeNotes.end();)
         {
+            auto& [noteNum, note] = *it;
+            
+            // Update envelope (release decay)
+            if (note.releasing)
+            {
+                note.envelope *= 0.95f; // Fast decay (adjust for release time)
+                if (note.envelope < 0.001f) // Remove when silent
+                {
+                    it = activeNotes.erase(it);
+                    continue;
+                }
+            }
+            
             float noteOut = 0.f;
             for(int o=0;o<4;++o)
             {
@@ -103,7 +122,9 @@ void Distortion1AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
                 note.phase[o] += phaseInc;
                 if(note.phase[o]>=juce::MathConstants<double>::twoPi) note.phase[o]-=juce::MathConstants<double>::twoPi;
             }
-            out += noteOut * 0.25f;
+            out += noteOut * 0.25f * note.envelope; // Apply envelope
+            
+            ++it;
         }
 
         left[s]=out;

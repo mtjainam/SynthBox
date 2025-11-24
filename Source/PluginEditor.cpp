@@ -3,8 +3,10 @@
 
 Distortion1AudioProcessorEditor::Distortion1AudioProcessorEditor (Distortion1AudioProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p), scope(p.latestSample), levelMeter(p.latestSample),
-      waveformPreviews{ WaveformPreviewComponent::SQUARE, WaveformPreviewComponent::SAW, 
-                        WaveformPreviewComponent::TRIANGLE, WaveformPreviewComponent::SINE }
+      waveformPreviews{ WaveformPreviewComponent(WaveformPreviewComponent::SQUARE, 0),
+                        WaveformPreviewComponent(WaveformPreviewComponent::SAW, 1),
+                        WaveformPreviewComponent(WaveformPreviewComponent::TRIANGLE, 2),
+                        WaveformPreviewComponent(WaveformPreviewComponent::SINE, 3) }
 {
     setSize (850, 500);
     setResizable(true, true);
@@ -13,7 +15,12 @@ Distortion1AudioProcessorEditor::Distortion1AudioProcessorEditor (Distortion1Aud
     addAndMakeVisible(levelMeter);
     
     for(int i=0; i<4; ++i)
+    {
         addAndMakeVisible(waveformPreviews[i]);
+        waveformPreviews[i].setOnClickCallback([this](int index) {
+            highlightKnob.setValue(index);
+        });
+    }
 
     auto make = [&](juce::Slider& s, juce::Label& l, const juce::String& txt,
                     float min,float max,float step)
@@ -48,6 +55,20 @@ Distortion1AudioProcessorEditor::Distortion1AudioProcessorEditor (Distortion1Aud
         mixA[i] = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
             audioProcessor.parameters, oscIDs[i]+"_MIX", mix[i]);
     }
+    
+    // Highlight knob (invisible but functional for OSC)
+    highlightKnob.setRange(0, 3, 1);
+    highlightKnob.setSliderStyle(juce::Slider::RotaryVerticalDrag);
+    highlightKnob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    highlightKnob.setVisible(false);
+    addChildComponent(highlightKnob);
+    
+    highlightA = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.parameters, "HIGHLIGHT_OSC", highlightKnob);
+    
+    // Listen to highlight knob changes
+    highlightKnob.addListener(this);
+    updateWaveformHighlights();
 }
 
 void Distortion1AudioProcessorEditor::paint (juce::Graphics& g)
@@ -94,25 +115,43 @@ void Distortion1AudioProcessorEditor::resized()
     scope.setBounds(scopeX, scopeY, scopeWidth, scopeHeight);
     levelMeter.setBounds(meterX, scopeY, meterWidth, scopeHeight);
     
-    const int xStart = (int)(230 * scale);
+    // Calculate available width for knobs and waveforms
+    const int controlsStartX = meterX + meterWidth + (int)(20 * scale);
+    const int controlsEndX = currentWidth - (int)(20 * scale);
+    const int availableWidth = controlsEndX - controlsStartX;
+    
     const int yStart = (int)(60 * scale);
     const int rowH = (int)(100 * scale);
     const int kSize = (int)(80 * scale);
-    const int gapX = (int)(100 * scale);
+    const int waveformWidth = (int)(120 * scale);
+    const int waveformHeight = (int)(60 * scale);
+    
+    // Calculate spacing: 3 knobs + 1 waveform, distribute evenly
+    const int totalItemsWidth = 3 * kSize + waveformWidth;
+    const int totalGaps = 4; // 3 gaps between knobs + 1 gap before waveform
+    const int gapX = (availableWidth - totalItemsWidth) / totalGaps;
+    
     const int labelHeight = (int)(18 * scale);
     const int labelOffset = (int)(20 * scale);
     const int textBoxWidth = (int)(45 * scale);
     const int textBoxHeight = (int)(18 * scale);
-    const int waveformWidth = (int)(120 * scale);
-    const int waveformHeight = (int)(60 * scale);
-    const int waveformX = xStart + 2*gapX + kSize + (int)(20 * scale);
+    
+    // Position highlight knob (invisible, positioned off-screen but functional)
+    highlightKnob.setBounds(-100, -100, 1, 1);
 
     for(int i=0;i<4;++i)
     {
         int y = yStart + i*rowH;
-        oct[i].setBounds (xStart + 0*gapX, y, kSize, kSize);
-        semi[i].setBounds(xStart + 1*gapX, y, kSize, kSize);
-        mix[i].setBounds (xStart + 2*gapX, y, kSize, kSize);
+        int xPos = controlsStartX;
+        
+        oct[i].setBounds(xPos, y, kSize, kSize);
+        xPos += kSize + gapX;
+        
+        semi[i].setBounds(xPos, y, kSize, kSize);
+        xPos += kSize + gapX;
+        
+        mix[i].setBounds(xPos, y, kSize, kSize);
+        xPos += kSize + gapX;
         
         // Update text box sizes for scaling
         oct[i].setTextBoxStyle(juce::Slider::TextBoxBelow, true, textBoxWidth, textBoxHeight);
@@ -125,9 +164,24 @@ void Distortion1AudioProcessorEditor::resized()
         
         // Position waveform preview to the right of the knobs
         int waveformY = y + (kSize - waveformHeight) / 2;
-        waveformPreviews[i].setBounds(waveformX, waveformY, waveformWidth, waveformHeight);
+        waveformPreviews[i].setBounds(xPos, waveformY, waveformWidth, waveformHeight);
     }
 }
 
-void Distortion1AudioProcessorEditor::sliderValueChanged (juce::Slider*) {}
+void Distortion1AudioProcessorEditor::sliderValueChanged (juce::Slider* s) 
+{
+    if (s == &highlightKnob)
+    {
+        updateWaveformHighlights();
+    }
+}
+
+void Distortion1AudioProcessorEditor::updateWaveformHighlights()
+{
+    int highlightedIndex = (int)highlightKnob.getValue();
+    for(int i=0; i<4; ++i)
+    {
+        waveformPreviews[i].setHighlighted(i == highlightedIndex);
+    }
+}
 

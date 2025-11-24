@@ -24,6 +24,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout Distortion1AudioProcessor::c
         p.push_back(std::make_unique<juce::AudioParameterFloat>(oscIDs[i]+"_SEMI","Semitone",-12.f,12.f,0.f));
         p.push_back(std::make_unique<juce::AudioParameterFloat>(oscIDs[i]+"_MIX","Mix",0.f,1.f,0.5f));
     }
+    
+    // Highlight parameter for OSC routing (0-3: Square, Saw, Triangle, Sine)
+    p.push_back(std::make_unique<juce::AudioParameterInt>("HIGHLIGHT_OSC","Highlight Oscillator",0,3,0));
+    
     return { p.begin(), p.end() };
 }
 

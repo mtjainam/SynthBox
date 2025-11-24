@@ -97,13 +97,28 @@ class WaveformPreviewComponent : public juce::Component
 public:
     enum WaveformType { SQUARE, SAW, TRIANGLE, SINE };
     
-    WaveformPreviewComponent(WaveformType type) : waveformType(type) {}
+    WaveformPreviewComponent(WaveformType type, int index) 
+        : waveformType(type), waveformIndex(index) 
+    {
+        setMouseCursor(juce::MouseCursor::PointingHandCursor);
+    }
+    
+    void setHighlighted(bool highlighted) 
+    { 
+        isHighlighted = highlighted; 
+        repaint(); 
+    }
+    
+    void setOnClickCallback(std::function<void(int)> callback) 
+    { 
+        onClickCallback = callback; 
+    }
     
     void paint(juce::Graphics& g) override
     {
         g.fillAll(juce::Colours::black);
         juce::Colour blueColour = juce::Colour(0xff4a90e2); // Blue similar to JUCE knobs
-        g.setColour(blueColour);
+        g.setColour(isHighlighted ? blueColour : juce::Colours::white);
         
         const float width = (float)getWidth();
         const float height = (float)getHeight();
@@ -146,11 +161,20 @@ public:
                 break;
         }
         
-        g.strokePath(p, juce::PathStrokeType(2.0f));
+        g.strokePath(p, juce::PathStrokeType(isHighlighted ? 2.5f : 2.0f));
+    }
+    
+    void mouseDown(const juce::MouseEvent&) override
+    {
+        if (onClickCallback)
+            onClickCallback(waveformIndex);
     }
     
 private:
     WaveformType waveformType;
+    int waveformIndex;
+    bool isHighlighted = false;
+    std::function<void(int)> onClickCallback;
 };
 
 //==============================================================================
@@ -165,6 +189,7 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
     void sliderValueChanged (juce::Slider* s) override;
+    void updateWaveformHighlights();
 
 private:
     Distortion1AudioProcessor& audioProcessor;
@@ -172,6 +197,9 @@ private:
     juce::Slider oct[4], semi[4], mix[4];
     juce::Label  octL[4], semiL[4], mixL[4];
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> octA[4], semiA[4], mixA[4];
+    
+    juce::Slider highlightKnob;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> highlightA;
     
     WaveformPreviewComponent waveformPreviews[4];
 

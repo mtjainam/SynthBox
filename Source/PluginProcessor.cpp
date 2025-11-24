@@ -46,29 +46,17 @@ void Distortion1AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     buffer.clear();
 
     // MIDI handling - polyphonic
-    juce::MidiBuffer::Iterator iter(midi);
-    juce::MidiMessage msg;
-    int samplePosition;
-    
-    while (iter.getNextEvent(msg, samplePosition))
+    for (const auto metadata : midi)
     {
+        const auto msg = metadata.getMessage();
         const int noteNumber = msg.getNoteNumber();
         
         if (msg.isNoteOn())
         {
-            // Handle note-on with velocity 0 as note-off (some MIDI devices do this)
-            if (msg.getVelocity() > 0)
-            {
-                NoteData note;
-                note.freq = juce::MidiMessage::getMidiNoteInHertz(noteNumber);
-                for(int i=0; i<4; ++i) note.phase[i] = 0.0;
-                activeNotes[noteNumber] = note;
-            }
-            else
-            {
-                // Velocity 0 = note off
-                activeNotes.erase(noteNumber);
-            }
+            NoteData note;
+            note.freq = juce::MidiMessage::getMidiNoteInHertz(noteNumber);
+            for(int i=0; i<4; ++i) note.phase[i] = 0.0;
+            activeNotes[noteNumber] = note;
         }
         else if (msg.isNoteOff())
         {

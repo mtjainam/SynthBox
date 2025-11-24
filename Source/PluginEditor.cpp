@@ -5,6 +5,8 @@ Distortion1AudioProcessorEditor::Distortion1AudioProcessorEditor (Distortion1Aud
     : AudioProcessorEditor (&p), audioProcessor (p), scope(p.latestSample)
 {
     setSize (850, 500);
+    setResizable(true, true);
+    setResizeLimits(600, 400, 2000, 1200);
     addAndMakeVisible(scope);
 
     auto make = [&](juce::Slider& s, juce::Label& l, const juce::String& txt,
@@ -42,18 +44,52 @@ void Distortion1AudioProcessorEditor::paint (juce::Graphics& g)
 {
     g.fillAll(juce::Colours::black);
     g.setColour(juce::Colours::white);
-    g.setFont(16.0f);
-    g.drawText("4-Osc Synth  |  Square, Saw, Triangle, Sine", 250, 10, 500, 25, juce::Justification::centredLeft);
+    
+    // Scale font size based on window size
+    const float baseWidth = 850.0f;
+    const float scale = getWidth() / baseWidth;
+    const float fontSize = 16.0f * scale;
+    g.setFont(fontSize);
+    
+    const int textX = (int)(250 * scale);
+    const int textY = (int)(10 * scale);
+    const int textW = (int)(500 * scale);
+    const int textH = (int)(25 * scale);
+    g.drawText("SynthBox", textX, textY, textW, textH, juce::Justification::centredLeft);
 }
 
 void Distortion1AudioProcessorEditor::resized()
 {
-    scope.setBounds(10, 50, 200, getHeight()-60);
-    int xStart = 230;
-    int yStart = 60;
-    int rowH   = 100;
-    int kSize  = 80;
-    int gapX   = 100;
+    // Base dimensions (original size)
+    const int baseWidth = 850;
+    const int baseHeight = 500;
+    
+    // Current dimensions
+    const int currentWidth = getWidth();
+    const int currentHeight = getHeight();
+    
+    // Calculate scale factors (use the smaller scale to maintain aspect ratio better)
+    const float scaleX = currentWidth / (float)baseWidth;
+    const float scaleY = currentHeight / (float)baseHeight;
+    const float scale = std::min(scaleX, scaleY);
+    
+    // Scale all dimensions
+    const int scopeWidth = (int)(200 * scale);
+    const int scopeX = (int)(10 * scale);
+    const int scopeY = (int)(50 * scale);
+    const int scopeHeight = currentHeight - (int)(60 * scale);
+    
+    scope.setBounds(scopeX, scopeY, scopeWidth, scopeHeight);
+    
+    const int xStart = (int)(230 * scale);
+    const int yStart = (int)(60 * scale);
+    const int rowH = (int)(100 * scale);
+    const int kSize = (int)(80 * scale);
+    const int gapX = (int)(100 * scale);
+    const int labelHeight = (int)(18 * scale);
+    const int labelOffset = (int)(20 * scale);
+    const int textBoxWidth = (int)(45 * scale);
+    const int textBoxHeight = (int)(18 * scale);
 
     for(int i=0;i<4;++i)
     {
@@ -62,11 +98,17 @@ void Distortion1AudioProcessorEditor::resized()
         oct[i].setBounds (xStart + 1*gapX, y, kSize, kSize);
         semi[i].setBounds(xStart + 2*gapX, y, kSize, kSize);
         mix[i].setBounds (xStart + 3*gapX, y, kSize, kSize);
+        
+        // Update text box sizes for scaling
+        fine[i].setTextBoxStyle(juce::Slider::TextBoxBelow, true, textBoxWidth, textBoxHeight);
+        oct[i].setTextBoxStyle(juce::Slider::TextBoxBelow, true, textBoxWidth, textBoxHeight);
+        semi[i].setTextBoxStyle(juce::Slider::TextBoxBelow, true, textBoxWidth, textBoxHeight);
+        mix[i].setTextBoxStyle(juce::Slider::TextBoxBelow, true, textBoxWidth, textBoxHeight);
 
-        fineL[i].setBounds(fine[i].getX(), y-20, kSize, 18);
-        octL[i].setBounds (oct[i].getX(),  y-20, kSize, 18);
-        semiL[i].setBounds(semi[i].getX(), y-20, kSize, 18);
-        mixL[i].setBounds (mix[i].getX(),  y-20, kSize, 18);
+        fineL[i].setBounds(fine[i].getX(), y-labelOffset, kSize, labelHeight);
+        octL[i].setBounds (oct[i].getX(),  y-labelOffset, kSize, labelHeight);
+        semiL[i].setBounds(semi[i].getX(), y-labelOffset, kSize, labelHeight);
+        mixL[i].setBounds (mix[i].getX(),  y-labelOffset, kSize, labelHeight);
     }
 }
 

@@ -50,7 +50,7 @@ private:
     double sampleRateHz = 44100.0;
     double phase[4] {0.0}, phaseInc[4] {0.0};
 
-    float mOct[4] {0}, mSemi[4] {0}, mMix[4] {0};
+    float mFine[4] {0}, mOct[4] {0}, mSemi[4] {0}, mMix[4] {0};
     float currentFreq = 440.0f;
     bool noteActive = false;
 

@@ -36,106 +36,6 @@ private:
 
 //==============================================================================
 
-class WaveformPreviewComponent : public juce::Component
-{
-public:
-    enum WaveformType { SQUARE, SAW, TRIANGLE, SINE };
-    
-    WaveformPreviewComponent(WaveformType type, int index) 
-        : waveformType(type), waveformIndex(index) 
-    {
-        setMouseCursor(juce::MouseCursor::PointingHandCursor);
-    }
-    
-    void setHighlighted(bool highlighted) 
-    { 
-        isHighlighted = highlighted; 
-        repaint(); 
-    }
-    
-    void setOnClickCallback(std::function<void(int)> callback) 
-    { 
-        onClickCallback = callback; 
-    }
-    
-    void paint(juce::Graphics& g) override
-    {
-        // Draw background with highlight
-        if (isHighlighted)
-        {
-            juce::Colour blueHighlight = juce::Colour(0xff4a90e2); // Blue similar to JUCE knobs
-            g.setColour(blueHighlight.withAlpha(0.3f));
-            g.fillRoundedRectangle(getLocalBounds().toFloat(), 4.0f);
-            g.setColour(blueHighlight);
-            g.drawRoundedRectangle(getLocalBounds().toFloat(), 4.0f, 2.0f);
-        }
-        else
-        {
-            g.fillAll(juce::Colours::black);
-        }
-        
-        juce::Colour blueHighlight = juce::Colour(0xff4a90e2);
-        g.setColour(isHighlighted ? blueHighlight : juce::Colours::white);
-        
-        const float width = (float)getWidth();
-        const float height = (float)getHeight();
-        const float midY = height * 0.5f;
-        const float amplitude = height * 0.4f;
-        
-        juce::Path p;
-        const int numPoints = 100;
-        
-        switch(waveformType)
-        {
-            case SQUARE:
-                p.startNewSubPath(0, midY - amplitude);
-                p.lineTo(width * 0.5f, midY - amplitude);
-                p.lineTo(width * 0.5f, midY + amplitude);
-                p.lineTo(width, midY + amplitude);
-                break;
-                
-            case SAW:
-                p.startNewSubPath(0, midY - amplitude);
-                p.lineTo(width, midY + amplitude);
-                break;
-                
-            case TRIANGLE:
-                p.startNewSubPath(0, midY + amplitude);
-                p.lineTo(width * 0.5f, midY - amplitude);
-                p.lineTo(width, midY + amplitude);
-                break;
-                
-            case SINE:
-                for(int i = 0; i <= numPoints; ++i)
-                {
-                    float x = (float)i / numPoints * width;
-                    float y = midY - amplitude * std::sin(juce::MathConstants<float>::twoPi * i / numPoints);
-                    if(i == 0)
-                        p.startNewSubPath(x, y);
-                    else
-                        p.lineTo(x, y);
-                }
-                break;
-        }
-        
-        g.strokePath(p, juce::PathStrokeType(isHighlighted ? 2.5f : 2.0f));
-    }
-    
-    void mouseDown(const juce::MouseEvent&) override
-    {
-        if (onClickCallback)
-            onClickCallback(waveformIndex);
-    }
-    
-private:
-    WaveformType waveformType;
-    int waveformIndex;
-    bool isHighlighted = false;
-    std::function<void(int)> onClickCallback;
-};
-
-//==============================================================================
-
 class Distortion1AudioProcessorEditor : public juce::AudioProcessorEditor,
                                         public juce::Slider::Listener
 {
@@ -146,20 +46,13 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
     void sliderValueChanged (juce::Slider* s) override;
-    void updateWaveformHighlights();
 
 private:
     Distortion1AudioProcessor& audioProcessor;
 
-    juce::Slider oct[4], semi[4], mix[4];
-    juce::Label  octL[4], semiL[4], mixL[4];
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> octA[4], semiA[4], mixA[4];
-    
-    juce::Slider highlightKnob;
-    juce::Label highlightLabel;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> highlightA;
-    
-    WaveformPreviewComponent waveformPreviews[4];
+    juce::Slider fine[4], oct[4], semi[4], mix[4];
+    juce::Label  fineL[4], octL[4], semiL[4], mixL[4];
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> fineA[4], octA[4], semiA[4], mixA[4];
 
     OscilloscopeComponent scope;
 

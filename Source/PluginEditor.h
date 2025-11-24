@@ -36,6 +36,68 @@ private:
 
 //==============================================================================
 
+class WaveformPreviewComponent : public juce::Component
+{
+public:
+    enum WaveformType { SQUARE, SAW, TRIANGLE, SINE };
+    
+    WaveformPreviewComponent(WaveformType type) : waveformType(type) {}
+    
+    void paint(juce::Graphics& g) override
+    {
+        g.fillAll(juce::Colours::black);
+        g.setColour(juce::Colours::white);
+        
+        const float width = (float)getWidth();
+        const float height = (float)getHeight();
+        const float midY = height * 0.5f;
+        const float amplitude = height * 0.4f;
+        
+        juce::Path p;
+        const int numPoints = 100;
+        
+        switch(waveformType)
+        {
+            case SQUARE:
+                p.startNewSubPath(0, midY - amplitude);
+                p.lineTo(width * 0.5f, midY - amplitude);
+                p.lineTo(width * 0.5f, midY + amplitude);
+                p.lineTo(width, midY + amplitude);
+                break;
+                
+            case SAW:
+                p.startNewSubPath(0, midY - amplitude);
+                p.lineTo(width, midY + amplitude);
+                break;
+                
+            case TRIANGLE:
+                p.startNewSubPath(0, midY + amplitude);
+                p.lineTo(width * 0.5f, midY - amplitude);
+                p.lineTo(width, midY + amplitude);
+                break;
+                
+            case SINE:
+                for(int i = 0; i <= numPoints; ++i)
+                {
+                    float x = (float)i / numPoints * width;
+                    float y = midY - amplitude * std::sin(juce::MathConstants<float>::twoPi * i / numPoints);
+                    if(i == 0)
+                        p.startNewSubPath(x, y);
+                    else
+                        p.lineTo(x, y);
+                }
+                break;
+        }
+        
+        g.strokePath(p, juce::PathStrokeType(2.0f));
+    }
+    
+private:
+    WaveformType waveformType;
+};
+
+//==============================================================================
+
 class Distortion1AudioProcessorEditor : public juce::AudioProcessorEditor,
                                         public juce::Slider::Listener
 {
@@ -50,9 +112,11 @@ public:
 private:
     Distortion1AudioProcessor& audioProcessor;
 
-    juce::Slider fine[4], oct[4], semi[4], mix[4];
-    juce::Label  fineL[4], octL[4], semiL[4], mixL[4];
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> fineA[4], octA[4], semiA[4], mixA[4];
+    juce::Slider oct[4], semi[4], mix[4];
+    juce::Label  octL[4], semiL[4], mixL[4];
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> octA[4], semiA[4], mixA[4];
+    
+    WaveformPreviewComponent waveformPreviews[4];
 
     OscilloscopeComponent scope;
 

@@ -20,8 +20,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout Distortion1AudioProcessor::c
 
     for (int i=0;i<4;++i)
     {
-        p.push_back(std::make_unique<juce::AudioParameterFloat>(oscIDs[i]+"_FINE","Fine",-100.f,100.f,0.f));
-        p.push_back(std::make_unique<juce::AudioParameterFloat>(oscIDs[i]+"_OCT","Octave",-2.f,2.f,0.f));
+        p.push_back(std::make_unique<juce::AudioParameterInt>(oscIDs[i]+"_OCT","Octave",-2,2,0));
         p.push_back(std::make_unique<juce::AudioParameterFloat>(oscIDs[i]+"_SEMI","Semitone",-12.f,12.f,0.f));
         p.push_back(std::make_unique<juce::AudioParameterFloat>(oscIDs[i]+"_MIX","Mix",0.f,1.f,0.5f));
     }
@@ -53,8 +52,7 @@ void Distortion1AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     // update params
     const juce::String oscIDs[4]={"SQUARE","SAW","TRIANGLE","SINE"};
     for(int i=0;i<4;++i){
-        mFine[i] = *parameters.getRawParameterValue(oscIDs[i]+"_FINE");
-        mOct[i]  = *parameters.getRawParameterValue(oscIDs[i]+"_OCT");
+        mOct[i]  = (float)*parameters.getRawParameterValue(oscIDs[i]+"_OCT");
         mSemi[i] = *parameters.getRawParameterValue(oscIDs[i]+"_SEMI");
         mMix[i]  = *parameters.getRawParameterValue(oscIDs[i]+"_MIX");
     }

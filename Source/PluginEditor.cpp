@@ -2,12 +2,17 @@
 #include "PluginEditor.h"
 
 Distortion1AudioProcessorEditor::Distortion1AudioProcessorEditor (Distortion1AudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p), scope(p.latestSample)
+    : AudioProcessorEditor (&p), audioProcessor (p), scope(p.latestSample),
+      waveformPreviews{ WaveformPreviewComponent::SQUARE, WaveformPreviewComponent::SAW, 
+                        WaveformPreviewComponent::TRIANGLE, WaveformPreviewComponent::SINE }
 {
     setSize (850, 500);
     setResizable(true, true);
     setResizeLimits(600, 400, 2000, 1200);
     addAndMakeVisible(scope);
+    
+    for(int i=0; i<4; ++i)
+        addAndMakeVisible(waveformPreviews[i]);
 
     auto make = [&](juce::Slider& s, juce::Label& l, const juce::String& txt,
                     float min,float max,float step)
@@ -24,13 +29,17 @@ Distortion1AudioProcessorEditor::Distortion1AudioProcessorEditor (Distortion1Aud
     const juce::String oscIDs[4]={"SQUARE","SAW","TRIANGLE","SINE"};
     for(int i=0;i<4;++i)
     {
-        make(fine[i],fineL[i],"Fine",-100,100,0.1);
-        make(oct[i],octL[i],"Oct",-2,2,1);
+        oct[i].setRange(-2, 2, 1);
+        oct[i].setSliderStyle(juce::Slider::RotaryVerticalDrag);
+        oct[i].setTextBoxStyle(juce::Slider::TextBoxBelow, true, 45, 18);
+        oct[i].setTextValueSuffix("");
+        addAndMakeVisible(oct[i]);
+        octL[i].setText("Oct", juce::dontSendNotification);
+        octL[i].setJustificationType(juce::Justification::centred);
+        addAndMakeVisible(octL[i]);
         make(semi[i],semiL[i],"Semi",-12,12,1);
         make(mix[i],mixL[i],"Mix",0,1,0.01);
 
-        fineA[i] = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-            audioProcessor.parameters, oscIDs[i]+"_FINE", fine[i]);
         octA[i] = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
             audioProcessor.parameters, oscIDs[i]+"_OCT", oct[i]);
         semiA[i] = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
@@ -90,25 +99,29 @@ void Distortion1AudioProcessorEditor::resized()
     const int labelOffset = (int)(20 * scale);
     const int textBoxWidth = (int)(45 * scale);
     const int textBoxHeight = (int)(18 * scale);
+    const int waveformWidth = (int)(120 * scale);
+    const int waveformHeight = (int)(60 * scale);
+    const int waveformX = xStart + 2*gapX + kSize + (int)(20 * scale);
 
     for(int i=0;i<4;++i)
     {
         int y = yStart + i*rowH;
-        fine[i].setBounds(xStart + 0*gapX, y, kSize, kSize);
-        oct[i].setBounds (xStart + 1*gapX, y, kSize, kSize);
-        semi[i].setBounds(xStart + 2*gapX, y, kSize, kSize);
-        mix[i].setBounds (xStart + 3*gapX, y, kSize, kSize);
+        oct[i].setBounds (xStart + 0*gapX, y, kSize, kSize);
+        semi[i].setBounds(xStart + 1*gapX, y, kSize, kSize);
+        mix[i].setBounds (xStart + 2*gapX, y, kSize, kSize);
         
         // Update text box sizes for scaling
-        fine[i].setTextBoxStyle(juce::Slider::TextBoxBelow, true, textBoxWidth, textBoxHeight);
         oct[i].setTextBoxStyle(juce::Slider::TextBoxBelow, true, textBoxWidth, textBoxHeight);
         semi[i].setTextBoxStyle(juce::Slider::TextBoxBelow, true, textBoxWidth, textBoxHeight);
         mix[i].setTextBoxStyle(juce::Slider::TextBoxBelow, true, textBoxWidth, textBoxHeight);
 
-        fineL[i].setBounds(fine[i].getX(), y-labelOffset, kSize, labelHeight);
         octL[i].setBounds (oct[i].getX(),  y-labelOffset, kSize, labelHeight);
         semiL[i].setBounds(semi[i].getX(), y-labelOffset, kSize, labelHeight);
         mixL[i].setBounds (mix[i].getX(),  y-labelOffset, kSize, labelHeight);
+        
+        // Position waveform preview to the right of the knobs
+        int waveformY = y + (kSize - waveformHeight) / 2;
+        waveformPreviews[i].setBounds(waveformX, waveformY, waveformWidth, waveformHeight);
     }
 }
 

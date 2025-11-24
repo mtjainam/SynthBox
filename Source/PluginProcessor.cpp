@@ -46,9 +46,12 @@ void Distortion1AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     buffer.clear();
 
     // MIDI handling - polyphonic
-    for (const auto metadata : midi)
+    juce::MidiBuffer::Iterator iter(midi);
+    juce::MidiMessage msg;
+    int samplePosition;
+    
+    while (iter.getNextEvent(msg, samplePosition))
     {
-        const auto msg = metadata.getMessage();
         const int noteNumber = msg.getNoteNumber();
         
         if (msg.isNoteOn())

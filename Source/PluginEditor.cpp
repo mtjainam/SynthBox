@@ -55,15 +55,13 @@ Distortion1AudioProcessorEditor::Distortion1AudioProcessorEditor (Distortion1Aud
             audioProcessor.parameters, oscIDs[i]+"_MIX", mix[i]);
     }
     
-    // Highlight knob
+    // Highlight knob (invisible but functional for OSC)
     highlightKnob.setRange(0, 3, 1);
     highlightKnob.setSliderStyle(juce::Slider::RotaryVerticalDrag);
-    highlightKnob.setTextBoxStyle(juce::Slider::TextBoxBelow, true, 45, 18);
-    highlightKnob.setTextValueSuffix("");
-    addAndMakeVisible(highlightKnob);
-    highlightLabel.setText("Highlight", juce::dontSendNotification);
-    highlightLabel.setJustificationType(juce::Justification::centred);
-    addAndMakeVisible(highlightLabel);
+    highlightKnob.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    highlightKnob.setVisible(false);
+    addChildComponent(highlightKnob);
+    highlightLabel.setVisible(false);
     
     highlightA = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.parameters, "HIGHLIGHT_OSC", highlightKnob);
@@ -127,12 +125,8 @@ void Distortion1AudioProcessorEditor::resized()
     const int waveformHeight = (int)(60 * scale);
     const int waveformX = xStart + 2*gapX + kSize + (int)(20 * scale);
     
-    // Position highlight knob (top right area)
-    const int highlightX = currentWidth - (int)(120 * scale);
-    const int highlightY = (int)(60 * scale);
-    highlightKnob.setBounds(highlightX, highlightY, kSize, kSize);
-    highlightKnob.setTextBoxStyle(juce::Slider::TextBoxBelow, true, (int)(45 * scale), (int)(18 * scale));
-    highlightLabel.setBounds(highlightX, highlightY - labelOffset, kSize, labelHeight);
+    // Position highlight knob (invisible, positioned off-screen but functional)
+    highlightKnob.setBounds(-100, -100, 1, 1);
 
     for(int i=0;i<4;++i)
     {

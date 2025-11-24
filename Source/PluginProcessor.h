@@ -1,6 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include <array>
+#include <map>
 
 //==============================================================================
 
@@ -48,11 +49,15 @@ private:
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
     double sampleRateHz = 44100.0;
-    double phase[4] {0.0}, phaseInc[4] {0.0};
 
     float mOct[4] {0}, mSemi[4] {0}, mMix[4] {0};
-    float currentFreq = 440.0f;
-    bool noteActive = false;
+    
+    // Polyphonic note tracking
+    struct NoteData {
+        float freq;
+        double phase[4] {0.0};
+    };
+    std::map<int, NoteData> activeNotes;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Distortion1AudioProcessor)
 };

@@ -63,9 +63,10 @@ public:
         // Draw background with highlight
         if (isHighlighted)
         {
-            g.setColour(juce::Colours::yellow.withAlpha(0.3f));
+            juce::Colour blueHighlight = juce::Colour(0xff4a90e2); // Blue similar to JUCE knobs
+            g.setColour(blueHighlight.withAlpha(0.3f));
             g.fillRoundedRectangle(getLocalBounds().toFloat(), 4.0f);
-            g.setColour(juce::Colours::yellow);
+            g.setColour(blueHighlight);
             g.drawRoundedRectangle(getLocalBounds().toFloat(), 4.0f, 2.0f);
         }
         else
@@ -73,7 +74,8 @@ public:
             g.fillAll(juce::Colours::black);
         }
         
-        g.setColour(isHighlighted ? juce::Colours::yellow : juce::Colours::white);
+        juce::Colour blueHighlight = juce::Colour(0xff4a90e2);
+        g.setColour(isHighlighted ? blueHighlight : juce::Colours::white);
         
         const float width = (float)getWidth();
         const float height = (float)getHeight();
@@ -116,7 +118,7 @@ public:
                 break;
         }
         
-        g.strokePath(p, juce::PathStrokeType(isHighlighted ? 3.0f : 2.0f));
+        g.strokePath(p, juce::PathStrokeType(isHighlighted ? 2.5f : 2.0f));
     }
     
     void mouseDown(const juce::MouseEvent&) override

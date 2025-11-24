@@ -1,0 +1,111 @@
+#include "PluginProcessor.h"
+#include "PluginEditor.h"
+
+Distortion1AudioProcessor::Distortion1AudioProcessor()
+#ifndef JucePlugin_PreferredChannelConfigurations
+    : AudioProcessor (BusesProperties()
+                     .withInput  ("Input", juce::AudioChannelSet::stereo(), true)
+                     .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
+      parameters (*this, nullptr, "PARAMETERS", createParameterLayout())
+#endif
+{
+}
+
+Distortion1AudioProcessor::~Distortion1AudioProcessor() {}
+
+juce::AudioProcessorValueTreeState::ParameterLayout Distortion1AudioProcessor::createParameterLayout()
+{
+    std::vector<std::unique_ptr<juce::RangedAudioParameter>> p;
+    const juce::String oscIDs[4] = {"SQUARE","SAW","TRIANGLE","SINE"};
+
+    for (int i=0;i<4;++i)
+    {
+        p.push_back(std::make_unique<juce::AudioParameterFloat>(oscIDs[i]+"_FINE","Fine",-100.f,100.f,0.f));
+        p.push_back(std::make_unique<juce::AudioParameterFloat>(oscIDs[i]+"_OCT","Octave",-2.f,2.f,0.f));
+        p.push_back(std::make_unique<juce::AudioParameterFloat>(oscIDs[i]+"_SEMI","Semitone",-12.f,12.f,0.f));
+        p.push_back(std::make_unique<juce::AudioParameterFloat>(oscIDs[i]+"_MIX","Mix",0.f,1.f,0.5f));
+    }
+    return { p.begin(), p.end() };
+}
+
+void Distortion1AudioProcessor::prepareToPlay (double sr, int) { sampleRateHz = sr; }
+
+void Distortion1AudioProcessor::releaseResources() {}
+
+bool Distortion1AudioProcessor::isBusesLayoutSupported (const BusesLayout& l) const
+{
+    return l.getMainOutputChannelSet() == juce::AudioChannelSet::stereo();
+}
+
+void Distortion1AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
+{
+    juce::ScopedNoDenormals _;
+    buffer.clear();
+
+    // MIDI handling
+    for (const auto metadata : midi)
+    {
+        const auto msg = metadata.getMessage();
+        if (msg.isNoteOn()) { noteActive = true; currentFreq = juce::MidiMessage::getMidiNoteInHertz(msg.getNoteNumber()); }
+        else if (msg.isNoteOff()) { noteActive = false; }
+    }
+
+    // update params
+    const juce::String oscIDs[4]={"SQUARE","SAW","TRIANGLE","SINE"};
+    for(int i=0;i<4;++i){
+        mFine[i] = *parameters.getRawParameterValue(oscIDs[i]+"_FINE");
+        mOct[i]  = *parameters.getRawParameterValue(oscIDs[i]+"_OCT");
+        mSemi[i] = *parameters.getRawParameterValue(oscIDs[i]+"_SEMI");
+        mMix[i]  = *parameters.getRawParameterValue(oscIDs[i]+"_MIX");
+    }
+
+    auto* left = buffer.getWritePointer(0);
+    auto* right= buffer.getNumChannels()>1?buffer.getWritePointer(1):nullptr;
+
+    if (!noteActive) return;
+
+    const int n = buffer.getNumSamples();
+    for(int s=0;s<n;++s)
+    {
+        float out=0.f;
+        for(int o=0;o<4;++o)
+        {
+            float freq = currentFreq * std::pow(2.f,mOct[o]) * std::pow(2.f,mSemi[o]/12.f);
+            phaseInc[o] = juce::MathConstants<double>::twoPi * freq / sampleRateHz;
+
+            float val=0.f;
+            double ph=phase[o];
+            switch(o){
+                case 0: val = std::sin(ph)>0?1.f:-1.f; break;
+                case 1: val = (float)(2.0*(ph/juce::MathConstants<double>::twoPi)-1.0); break;
+                case 2: val = (float)(2.0/juce::MathConstants<double>::pi)*std::asin(std::sin(ph)); break;
+                case 3: val = std::sin(ph); break;
+            }
+            out += val * mMix[o];
+            phase[o] += phaseInc[o];
+            if(phase[o]>=juce::MathConstants<double>::twoPi) phase[o]-=juce::MathConstants<double>::twoPi;
+        }
+
+        out *= 0.25f;
+        left[s]=out;
+        if(right) right[s]=out;
+        latestSample.store(out);
+    }
+}
+
+void Distortion1AudioProcessor::getStateInformation (juce::MemoryBlock& dest)
+{
+    copyXmlToBinary (*parameters.copyState().createXml(), dest);
+}
+void Distortion1AudioProcessor::setStateInformation (const void* d, int sz)
+{
+    if(auto xml=getXmlFromBinary(d,sz))
+        if(xml->hasTagName(parameters.state.getType()))
+            parameters.replaceState(juce::ValueTree::fromXml(*xml));
+}
+
+bool Distortion1AudioProcessor::hasEditor() const { return true; }
+juce::AudioProcessorEditor* Distortion1AudioProcessor::createEditor() { return new Distortion1AudioProcessorEditor(*this); }
+
+juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new Distortion1AudioProcessor(); }
+

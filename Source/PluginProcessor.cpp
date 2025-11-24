@@ -53,10 +53,19 @@ void Distortion1AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
         
         if (msg.isNoteOn())
         {
-            NoteData note;
-            note.freq = juce::MidiMessage::getMidiNoteInHertz(noteNumber);
-            for(int i=0; i<4; ++i) note.phase[i] = 0.0;
-            activeNotes[noteNumber] = note;
+            // Handle note-on with velocity 0 as note-off (some MIDI devices do this)
+            if (msg.getVelocity() > 0)
+            {
+                NoteData note;
+                note.freq = juce::MidiMessage::getMidiNoteInHertz(noteNumber);
+                for(int i=0; i<4; ++i) note.phase[i] = 0.0;
+                activeNotes[noteNumber] = note;
+            }
+            else
+            {
+                // Velocity 0 = note off
+                activeNotes.erase(noteNumber);
+            }
         }
         else if (msg.isNoteOff())
         {

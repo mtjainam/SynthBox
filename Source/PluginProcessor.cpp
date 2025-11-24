@@ -45,23 +45,12 @@ void Distortion1AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     juce::ScopedNoDenormals _;
     buffer.clear();
 
-    // MIDI handling - polyphonic
+    // MIDI handling
     for (const auto metadata : midi)
     {
         const auto msg = metadata.getMessage();
-        const int noteNumber = msg.getNoteNumber();
-        
-        if (msg.isNoteOn())
-        {
-            NoteData note;
-            note.freq = juce::MidiMessage::getMidiNoteInHertz(noteNumber);
-            for(int i=0; i<4; ++i) note.phase[i] = 0.0;
-            activeNotes[noteNumber] = note;
-        }
-        else if (msg.isNoteOff())
-        {
-            activeNotes.erase(noteNumber);
-        }
+        if (msg.isNoteOn()) { noteActive = true; currentFreq = juce::MidiMessage::getMidiNoteInHertz(msg.getNoteNumber()); }
+        else if (msg.isNoteOff()) { noteActive = false; }
     }
 
     // update params
@@ -75,41 +64,31 @@ void Distortion1AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, 
     auto* left = buffer.getWritePointer(0);
     auto* right= buffer.getNumChannels()>1?buffer.getWritePointer(1):nullptr;
 
-    if (activeNotes.empty()) return;
+    if (!noteActive) return;
 
     const int n = buffer.getNumSamples();
     for(int s=0;s<n;++s)
     {
         float out=0.f;
-        
-        // Process each active note
-        for(auto& [noteNum, note] : activeNotes)
+        for(int o=0;o<4;++o)
         {
-            float noteOut = 0.f;
-            for(int o=0;o<4;++o)
-            {
-                float freq = note.freq * std::pow(2.f,mOct[o]) * std::pow(2.f,mSemi[o]/12.f);
-                double phaseInc = juce::MathConstants<double>::twoPi * freq / sampleRateHz;
+            float freq = currentFreq * std::pow(2.f,mOct[o]) * std::pow(2.f,mSemi[o]/12.f);
+            phaseInc[o] = juce::MathConstants<double>::twoPi * freq / sampleRateHz;
 
-                float val=0.f;
-                double ph=note.phase[o];
-                switch(o){
-                    case 0: val = std::sin(ph)>0?1.f:-1.f; break;
-                    case 1: val = (float)(2.0*(ph/juce::MathConstants<double>::twoPi)-1.0); break;
-                    case 2: val = (float)(2.0/juce::MathConstants<double>::pi)*std::asin(std::sin(ph)); break;
-                    case 3: val = std::sin(ph); break;
-                }
-                noteOut += val * mMix[o];
-                note.phase[o] += phaseInc;
-                if(note.phase[o]>=juce::MathConstants<double>::twoPi) note.phase[o]-=juce::MathConstants<double>::twoPi;
+            float val=0.f;
+            double ph=phase[o];
+            switch(o){
+                case 0: val = std::sin(ph)>0?1.f:-1.f; break;
+                case 1: val = (float)(2.0*(ph/juce::MathConstants<double>::twoPi)-1.0); break;
+                case 2: val = (float)(2.0/juce::MathConstants<double>::pi)*std::asin(std::sin(ph)); break;
+                case 3: val = std::sin(ph); break;
             }
-            out += noteOut * 0.25f;
+            out += val * mMix[o];
+            phase[o] += phaseInc[o];
+            if(phase[o]>=juce::MathConstants<double>::twoPi) phase[o]-=juce::MathConstants<double>::twoPi;
         }
-        
-        // Normalize by number of active notes to prevent clipping
-        if(!activeNotes.empty())
-            out /= (float)activeNotes.size();
 
+        out *= 0.25f;
         left[s]=out;
         if(right) right[s]=out;
         latestSample.store(out);
